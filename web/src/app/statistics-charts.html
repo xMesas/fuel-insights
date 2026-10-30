@@ -1,0 +1,208 @@
+<p class="scope-note">
+	Los siguientes gráficos comparan toda España y siguen el carburante seleccionado.
+</p>
+@for (section of sections; track section.kind) {
+	@if (section.kind === 'brands') {
+		<app-ad-slot />
+	}
+	<section
+		class="chart-card"
+		[attr.aria-labelledby]="section.kind + '-title'"
+		[attr.aria-busy]="section.state().status === 'loading'"
+	>
+		<h2 [id]="section.kind + '-title'">{{ section.title }}</h2>
+		@if (section.state().status === 'loading') {
+			<p role="status">Cargando estadísticas…</p>
+		} @else if (section.state().status === 'error') {
+			<p role="alert">No se pudo cargar este gráfico. Revisa la conexión y vuelve a intentarlo.</p>
+			<button (click)="section.retry.update((value) => value + 1)">Reintentar</button>
+		} @else {
+			@switch (section.kind) {
+				@case ('weekdays') {
+					@if (weekdayData(); as data) {
+						@if (weekdayRows().length) {
+							<p class="conclusion">{{ weekdayConclusion(data) }}</p>
+							<p>
+								Desviación respecto al precio de la semana que rodea cada día. Por debajo de cero es
+								más barato. Solo días completos del {{ effectiveDate(data.from) }} al
+								{{ effectiveDate(data.to) }}.
+							</p>
+							@defer (on viewport) {
+								<app-statistics-plot
+									kind="weekdays"
+									[rows]="plotRows('weekdays')"
+									[label]="section.title"
+								/>
+							} @placeholder {
+								<div class="plot-placeholder"></div>
+							}
+							<details>
+								<summary>Ver como tabla</summary>
+								<div
+									class="table-wrap"
+									tabindex="0"
+									role="region"
+									aria-label="Datos por día de la semana"
+								>
+									<table>
+										<caption>
+											{{
+												data.fuel.name
+											}}. Desviación por día de la semana.
+										</caption>
+										<thead>
+											<tr>
+												<th scope="col">Día</th>
+												<th scope="col">Céntimos por litro</th>
+												<th scope="col">Días completos</th>
+											</tr>
+										</thead>
+										<tbody>
+											@for (row of weekdayRows(); track row.weekday) {
+												<tr>
+													<th scope="row">{{ weekdays[row.weekday - 1] }}</th>
+													<td>{{ decimal(row.deviation * 100, 1) }}</td>
+													<td>{{ row.days }}</td>
+												</tr>
+											}
+										</tbody>
+									</table>
+								</div>
+							</details>
+						} @else {
+							<p>Aún no hay suficientes días completos para comparar este carburante.</p>
+						}
+					}
+				}
+				@case ('spread') {
+					@if (spreadData(); as data) {
+						<p class="data-note">
+							Precios del Ministerio del {{ importedDate(data.updatedAt) }}. {{ data.fuel.name }}.
+						</p>
+						@if (data.spain.stations) {
+							<p class="conclusion">{{ spreadConclusion(data) }}</p>
+							<p>
+								Una de las baratas: percentil 10. Una de las caras: percentil 90. No son el mínimo
+								ni el máximo.
+							</p>
+							@defer (on viewport) {
+								<app-statistics-plot
+									kind="spread"
+									[rows]="plotRows('spread')"
+									[label]="section.title"
+								/>
+							} @placeholder {
+								<div
+									class="plot-placeholder"
+									[style.height.px]="spreadRows().length * 30 + 80"
+								></div>
+							}
+							<details>
+								<summary>Ver como tabla</summary>
+								<div
+									class="table-wrap"
+									tabindex="0"
+									role="region"
+									aria-label="Diferencias de precio por provincia"
+								>
+									<table>
+										<caption>
+											{{
+												data.fuel.name
+											}}. Diferencias de precio, de mayor a menor.
+										</caption>
+										<thead>
+											<tr>
+												<th scope="col">Zona</th>
+												<th scope="col">Barata (P10)</th>
+												<th scope="col">Mediana</th>
+												<th scope="col">Cara (P90)</th>
+												<th scope="col">Mínimo</th>
+												<th scope="col">Máximo</th>
+												<th scope="col">Gasolineras</th>
+											</tr>
+										</thead>
+										<tbody>
+											@for (row of [data.spain, ...spreadRows()]; track row.provinceId) {
+												<tr>
+													<th scope="row">{{ provinceName(row.provinceId) }}</th>
+													<td>{{ price(row.cheapPrice) }}</td>
+													<td>{{ price(row.medianPrice) }}</td>
+													<td>{{ price(row.dearPrice) }}</td>
+													<td>{{ price(row.minPrice) }}</td>
+													<td>{{ price(row.maxPrice) }}</td>
+													<td>{{ row.stations }}</td>
+												</tr>
+											}
+										</tbody>
+									</table>
+								</div>
+							</details>
+						} @else {
+							<p>No hay precios de este carburante para comparar gasolineras.</p>
+						}
+					}
+				}
+				@case ('brands') {
+					@if (brandData(); as data) {
+						<p class="data-note">
+							Precios del Ministerio del {{ importedDate(data.updatedAt) }}. {{ data.fuel.name }}.
+						</p>
+						@if (brandRows().length) {
+							<p class="conclusion">{{ brandConclusion(data) }}</p>
+							<p>
+								Solo marcas con al menos 50 gasolineras. Media de España:
+								{{ price(data.nationalAverage) }}.
+							</p>
+							@defer (on viewport) {
+								<app-statistics-plot
+									kind="brands"
+									[rows]="plotRows('brands')"
+									[reference]="data.nationalAverage"
+									[label]="section.title"
+								/>
+							} @placeholder {
+								<div
+									class="plot-placeholder"
+									[style.height.px]="brandRows().length * 30 + 80"
+								></div>
+							}
+							<details>
+								<summary>Ver como tabla</summary>
+								<div class="table-wrap" tabindex="0" role="region" aria-label="Precios por marca">
+									<table>
+										<caption>
+											{{
+												data.fuel.name
+											}}. Marcas, de menor a mayor precio medio.
+										</caption>
+										<thead>
+											<tr>
+												<th scope="col">Marca</th>
+												<th scope="col">Media</th>
+												<th scope="col">Mínimo</th>
+												<th scope="col">Gasolineras</th>
+											</tr>
+										</thead>
+										<tbody>
+											@for (row of brandRows(); track row.code) {
+												<tr>
+													<th scope="row">{{ row.name }}</th>
+													<td>{{ price(row.averagePrice) }}</td>
+													<td>{{ price(row.minPrice) }}</td>
+													<td>{{ row.stations }}</td>
+												</tr>
+											}
+										</tbody>
+									</table>
+								</div>
+							</details>
+						} @else {
+							<p>No hay marcas con al menos 50 gasolineras para este carburante.</p>
+						}
+					}
+				}
+			}
+		}
+	</section>
+}

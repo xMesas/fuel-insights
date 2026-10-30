@@ -1,0 +1,172 @@
+@import '@fontsource/fira-sans/latin-400.css';
+@import '@fontsource/fira-sans/latin-600.css';
+@import '@fontsource/fira-sans-condensed/latin-600.css';
+@import 'maplibre-gl/dist/maplibre-gl.css';
+
+@font-face {
+	font-family: DSEG7;
+	src: url('/fonts/DSEG7Classic-Bold.woff2') format('woff2');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+/* 14 segments draw letters too: the LED notices. */
+@font-face {
+	font-family: DSEG14;
+	src: url('/fonts/DSEG14Classic-Regular.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+:root {
+	color-scheme: light dark;
+	--page: #f9f9f7;
+	--panel: #1d2228;
+	--panel-ink: #e8eaed;
+	--panel-ink-2: #a9b0b8;
+	--led: #ffb224;
+	--panel-select: rgba(255, 178, 36, 0.12);
+	--surface: #fcfcfb;
+	--ink: #0b0b0b;
+	--ink-2: #52514e;
+	--ink-3: #898781;
+	--hairline: rgba(11, 11, 11, 0.1);
+	--grid: #e1e0d9;
+	--axis: #c3c2b7;
+	--data: #2a78d6;
+	--data-soft: #b7d3f6;
+	--accent: #b45309;
+	--focus: #2a78d6;
+	--error: #d03b3b;
+	--space-xs: 4px;
+	--space-sm: 8px;
+	--space-md: 16px;
+	--space-lg: 24px;
+	--space-xl: 32px;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--page: #0d0d0d;
+		--surface: #1a1a19;
+		--ink: #f0efec;
+		--ink-2: #c3c2b7;
+		--ink-3: #898781;
+		--hairline: rgba(255, 255, 255, 0.1);
+		--grid: #2c2c2a;
+		--axis: #383835;
+		--data: #3987e5;
+		--data-soft: #184f95;
+		--accent: #f59e0b;
+		--focus: #3987e5;
+		--error: #e66767;
+	}
+}
+* {
+	box-sizing: border-box;
+}
+body {
+	margin: 0;
+	background: var(--page);
+	color: var(--ink);
+	font:
+		400 16px/1.5 'Fira Sans',
+		system-ui,
+		'Segoe UI',
+		sans-serif;
+}
+h1,
+h2 {
+	font-family: 'Fira Sans Condensed', system-ui, 'Segoe UI', sans-serif;
+	font-weight: 600;
+	line-height: 1.2;
+}
+button {
+	font: inherit;
+	min-height: 44px;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--axis);
+	border-radius: 8px;
+	color: var(--ink);
+	background: var(--surface);
+	cursor: pointer;
+}
+button:hover {
+	border-color: var(--ink-2);
+}
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 3px;
+}
+.chart-card svg text {
+	font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		animation: none !important;
+		transition: none !important;
+	}
+}
+
+.area-popup .maplibregl-popup-content {
+	background: var(--surface);
+	color: var(--ink);
+	border: 1px solid var(--hairline);
+	border-radius: 8px;
+	padding: 16px;
+	font:
+		16px 'Fira Sans',
+		sans-serif;
+}
+.area-popup .maplibregl-popup-tip {
+	border-top-color: var(--surface);
+}
+.area-popup button {
+	min-height: 44px;
+}
+
+.area-popup-dark .maplibregl-popup-content {
+	background: var(--panel);
+	color: var(--panel-ink);
+	border-color: var(--panel-ink-2);
+}
+.area-popup-dark.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.area-popup-dark.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.area-popup-dark.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+	border-top-color: var(--panel);
+}
+.area-popup-dark.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.area-popup-dark.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.area-popup-dark.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+	border-bottom-color: var(--panel);
+}
+.area-popup-dark.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+	border-right-color: var(--panel);
+}
+.area-popup-dark.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+	border-left-color: var(--panel);
+}
+.area-popup-dark button {
+	background: var(--panel);
+	color: var(--panel-ink);
+	border-color: var(--panel-ink-2);
+}
+.area-popup-dark button:focus-visible {
+	outline-color: var(--panel-ink);
+}

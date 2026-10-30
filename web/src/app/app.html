@@ -1,0 +1,62 @@
+<header class="site-header">
+	<a class="brand" routerLink="/">fuel-insights</a>
+	<nav aria-label="Navegación principal">
+		<a
+			routerLink="/"
+			routerLinkActive="active"
+			[routerLinkActiveOptions]="{
+				paths: 'exact',
+				queryParams: 'ignored',
+				matrixParams: 'ignored',
+				fragment: 'ignored',
+			}"
+			ariaCurrentWhenActive="page"
+			>Mapa</a
+		>
+		<a routerLink="/estadisticas" routerLinkActive="active" ariaCurrentWhenActive="page"
+			>Estadísticas</a
+		>
+		<a
+			class="account-tab"
+			[routerLink]="account.account() ? '/mis-gasolineras' : '/entrar'"
+			routerLinkActive="active"
+			ariaCurrentWhenActive="page"
+			>{{ account.account() ? 'Mis gasolineras' : 'Entrar' }}</a
+		>
+	</nav>
+</header>
+<router-outlet />
+<!-- The licences ask to name each source, keep the data as published and not suggest any endorsement. -->
+<footer>
+	<app-footer-links />
+	<h2 class="visually-hidden">Fuentes de los datos</h2>
+	<ul>
+		<li>
+			Precios de carburantes: Ministerio para la Transición Ecológica y el Reto Demográfico,
+			<a
+				href="https://datos.gob.es/es/catalogo/e05068001-precio-de-carburantes-en-las-gasolineras-espanolas"
+				rel="noopener"
+				>datos abiertos del Gobierno de España</a
+			>.
+		</li>
+		<li>
+			Puntos de recarga: Ministerio para la Transición Ecológica y el Reto Demográfico, publicados
+			por el
+			<a href="https://nap.dgt.es/dataset/puntos-de-recarga-electrica-para-vehiculos" rel="noopener"
+				>Punto de Acceso Nacional de la DGT</a
+			>
+			(CC BY 4.0).
+		</li>
+		<li>Límites de municipios y provincias: © Instituto Geográfico Nacional (CC BY 4.0).</li>
+		<li>
+			Mapa: <a href="https://openfreemap.org/" rel="noopener">OpenFreeMap</a>, ©
+			<a href="https://www.openstreetmap.org/copyright" rel="noopener"
+				>colaboradores de OpenStreetMap</a
+			>.
+		</li>
+	</ul>
+	<p>
+		fuel-insights no está vinculado al Ministerio ni a la DGT. Los datos se muestran tal como se
+		publican, con su fecha y hora; el precio en la gasolinera puede haber cambiado desde entonces.
+	</p>
+</footer>

@@ -1,0 +1,105 @@
+<main class="data-page">
+	@if (data(); as page) {
+		<nav class="breadcrumbs" aria-label="Ruta de navegación">
+			<a routerLink="/">Inicio</a><span aria-hidden="true">›</span
+			><a [routerLink]="['/gasolineras', page.province.slug]">{{ page.province.name }}</a
+			><span aria-hidden="true">›</span><span>{{ page.town.name }}</span>
+		</nav>
+		<h1>Gasolineras en {{ page.town.name }} ({{ page.province.name }})</h1>
+		<p class="updated">{{ ministryDate(page.updatedAt) }}</p>
+		<div class="table-scroll" tabindex="0" role="region" aria-label="Precios por carburante">
+			<table>
+				<caption>
+					Medias por carburante y comparación con
+					{{
+						page.province.name
+					}}
+				</caption>
+				<thead>
+					<tr>
+						<th scope="col">Carburante</th>
+						<th scope="col">Media</th>
+						<th scope="col">Más barata</th>
+						<th scope="col">Gasolineras</th>
+						<th scope="col">Frente a la provincia</th>
+					</tr>
+				</thead>
+				<tbody>
+					@for (row of page.fuels; track row.fuel.code) {
+						<tr>
+							<th scope="row">{{ row.fuel.name }}</th>
+							<td class="num">{{ price(row.averagePrice, row.fuel.unit) }}</td>
+							<td class="num">{{ price(row.minPrice, row.fuel.unit) }}</td>
+							<td>{{ row.stations }}</td>
+							<td>{{ comparison(row.averagePrice, row.provinceAverage, page.province.name) }}</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+		<section>
+			<h2>Todas las gasolineras de {{ page.town.name }}</h2>
+			<app-fuel-picker [fuels]="pickerFuels()" />
+			@if (!selected()) {
+				<p role="status">
+					No hay gasolineras con el carburante seleccionado en {{ page.town.name }}.
+				</p>
+			}
+			<div class="table-scroll" tabindex="0" role="region" aria-label="Gasolineras del municipio">
+				<table>
+					<caption>
+						{{
+							selected()?.fuel?.name
+						}}
+						en
+						{{
+							page.town.name
+						}}; primero las que venden este carburante
+					</caption>
+					<thead>
+						<tr>
+							<th scope="col">Gasolinera</th>
+							<th scope="col">Dirección</th>
+							<th scope="col">Horario</th>
+							<th scope="col" [attr.aria-sort]="ascending() ? 'ascending' : 'descending'">
+								<button type="button" (click)="ascending.set(!ascending())">
+									Precio {{ ascending() ? '↑' : '↓' }}
+								</button>
+							</th>
+						</tr>
+					</thead>
+					<tbody>
+						@for (station of stations(); track station.id) {
+							<tr>
+								<th scope="row">
+									<a [routerLink]="['/gasolinera', station.slug]">{{ station.name }}</a>
+								</th>
+								<td>{{ station.address }}</td>
+								<td>{{ open(station) }}</td>
+								<td class="num">
+									@if (selected(); as row) {
+										@if (station.prices[row.fuel.code] != null) {
+											{{ price(station.prices[row.fuel.code], row.fuel.unit) }}
+										} @else {
+											<span aria-label="No vende este carburante">—</span>
+										}
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		<app-ad-slot format="leaderboard" />
+	} @else if (status() === 'loading') {
+		<h1>Gasolineras por municipio</h1>
+		<p role="status">Cargando precios…</p>
+	} @else if (status() === 'missing') {
+		<h1>No encontramos esta página.</h1>
+	} @else {
+		<h1>Precios no disponibles</h1>
+		<p role="alert">No se han podido cargar los precios. Vuelve a intentarlo más tarde.</p>
+	}
+	<p><a routerLink="/">Ver gasolineras en el mapa</a></p>
+</main>

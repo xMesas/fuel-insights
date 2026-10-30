@@ -1,0 +1,53 @@
+<main class="data-page">
+	@if (data(); as page) {
+		<h1>{{ label() }} hoy, {{ fullDate(page.updatedAt) }}</h1>
+		<p class="updated">{{ ministryDate(page.updatedAt) }}</p>
+		<app-page-figures [data]="page.national" [unit]="page.fuel.unit" />
+		<section aria-labelledby="province-heading">
+			<h2 id="province-heading">Precios por provincia</h2>
+			<div class="table-scroll" tabindex="0" role="region" aria-label="Precios por provincia">
+				<table>
+					<caption>
+						{{
+							page.fuel.shortName ?? page.fuel.name
+						}}
+						por provincia, de menor a mayor precio medio
+					</caption>
+					<thead>
+						<tr>
+							<th scope="col">Provincia</th>
+							<th scope="col">Media</th>
+							<th scope="col">Más barata</th>
+							<th scope="col">Gasolineras</th>
+						</tr>
+					</thead>
+					<tbody>
+						@for (row of page.provinces; track row.slug) {
+							<tr>
+								<th scope="row">
+									<a [routerLink]="['/gasolineras', row.slug]">{{ row.name }}</a>
+								</th>
+								<td class="num">{{ price(row.averagePrice, page.fuel.unit) }}</td>
+								<td class="num">{{ price(row.minPrice, page.fuel.unit) }}</td>
+								<td>{{ count(row.stations) }}</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		<section>
+			<h2>Las más baratas de España</h2>
+			<app-cheapest-table [rows]="page.cheapest" [unit]="page.fuel.unit" />
+		</section>
+	} @else if (status() === 'loading') {
+		<h1>Precios de carburantes</h1>
+		<p role="status">Cargando precios…</p>
+	} @else if (status() === 'missing') {
+		<h1>No encontramos esta página.</h1>
+	} @else {
+		<h1>Precios no disponibles</h1>
+		<p role="alert">No se han podido cargar los precios. Vuelve a intentarlo más tarde.</p>
+	}
+	<p><a routerLink="/">Ver gasolineras en el mapa</a></p>
+</main>

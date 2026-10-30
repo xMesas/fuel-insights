@@ -1,0 +1,205 @@
+<main>
+	<h1>Estadísticas del precio de los carburantes</h1>
+	<div class="filters">
+		<label
+			>Zona
+			<select [value]="selectedArea()" (change)="selectedArea.set($any($event.target).value)">
+				<option value="ES">España</option>
+				@for (area of areas(); track area.id) {
+					<option [value]="area.id">{{ area.name }}</option>
+				}
+			</select></label
+		>
+		<app-fuel-picker [fuels]="fuels()" />
+	</div>
+	<section
+		class="chart-card trend-card"
+		aria-labelledby="trend-title"
+		[attr.aria-busy]="trendStatus() === 'loading'"
+	>
+		<h2 id="trend-title">Evolución del precio</h2>
+		<p class="trend-summary">
+			{{ weeklyText() }}
+			@if (periodMaximum(); as max) {
+				Máximo del periodo: {{ price(max.averagePrice, currentFuel()?.fuel?.unit) }} ({{
+					effectiveDate(max.date)
+				}}).
+			}
+		</p>
+		<p>Medias diarias y de 7 días en {{ areaName() }}. €/{{ currentFuel()?.fuel?.unit ?? 'l' }}.</p>
+		@if (trendStatus() === 'loading') {
+			<p role="status">Cargando evolución…</p>
+		}
+		@if (trendStatus() === 'error') {
+			<div role="alert">
+				<p>! No se pudo cargar la evolución del precio.</p>
+				<p>Revisa la conexión y vuelve a intentarlo.</p>
+				<button (click)="retryTrend()">Reintentar</button>
+			</div>
+		} @else if (trendStatus() === 'empty') {
+			<p>Aún sin historial para este carburante.</p>
+		} @else if (trend(); as history) {
+			<div class="trend-content" [class.reloading]="trendStatus() === 'loading'">
+				<p class="data-note">
+					{{ effectiveDate(history.from) }} – {{ effectiveDate(history.to) }}.
+					{{ history.fuel.name }} en {{ history.area.name }}.
+				</p>
+				<!-- The chart library (about 170 KB) loads when the chart comes into view, not with the page. -->
+				@defer (on viewport) {
+					<app-trend-chart [trend]="history" />
+				} @placeholder {
+					<div class="chart-placeholder trend-placeholder"></div>
+				}
+				<button
+					class="trend-table-toggle"
+					[attr.aria-expanded]="showTrendTable()"
+					aria-controls="trend-table"
+					(click)="showTrendTable.update((value) => !value)"
+				>
+					{{ showTrendTable() ? 'Ocultar tabla' : 'Ver como tabla' }}
+				</button>
+				@if (showTrendTable()) {
+					<div
+						id="trend-table"
+						class="table-wrap"
+						role="region"
+						aria-label="Tabla de evolución del precio"
+						tabindex="0"
+					>
+						<table>
+							<caption>
+								{{
+									history.area.name
+								}}.
+								{{
+									history.fuel.name
+								}}. Más recientes primero.
+							</caption>
+							<thead>
+								<tr>
+									<th scope="col">Fecha</th>
+									<th scope="col">Media diaria</th>
+									<th scope="col">Mediana</th>
+									<th scope="col">Media de 7 días</th>
+									<th scope="col">Gasolineras</th>
+								</tr>
+							</thead>
+							<tbody>
+								@for (point of trendRows(); track point.date) {
+									<tr>
+										<th scope="row">{{ effectiveDate(point.date) }}</th>
+										<td>{{ price(point.averagePrice, currentFuel()?.fuel?.unit) }}</td>
+										<td>{{ price(point.medianPrice, currentFuel()?.fuel?.unit) }}</td>
+										<td>{{ price(point.movingAverage7, currentFuel()?.fuel?.unit) }}</td>
+										<td>{{ count(point.stations) }}</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+			</div>
+		}
+	</section>
+	<section
+		class="chart-card"
+		aria-labelledby="chart-title"
+		[attr.aria-busy]="status() === 'loading'"
+	>
+		<h2 id="chart-title">Precio medio por provincia</h2>
+		@if (status() === 'loading') {
+			<p role="status">Cargando provincias…</p>
+		}
+		@if (status() === 'error') {
+			<div role="alert">
+				<p>! No se pudieron cargar los precios por provincia.</p>
+				<button (click)="retry()">Reintentar</button>
+			</div>
+		} @else if (status() === 'empty') {
+			<p>Aún sin historial para este carburante.</p>
+		} @else if (status() === 'no-prices') {
+			<p>Aún sin historial para este carburante.</p>
+		} @else if (stats(); as data) {
+			<div class="results" [class.reloading]="status() === 'loading'">
+				<p class="data-note">
+					Precios del {{ effectiveDate(data.date) }}, importados el
+					{{ importedDate(data.importedAt) }}. {{ data.fuel.name }}.
+				</p>
+				@for (group of provinceGroups(); track group.title; let index = $index) {
+					<h3>{{ group.title }}</h3>
+					@if (index === 1) {
+						<p>Impuestos más bajos: no comparables con el resto.</p>
+					}
+					@if (group.stats.provinces.length) {
+						@defer (on viewport) {
+							<app-province-chart
+								[stats]="group.stats"
+								[area]="selectedArea()"
+								[helpId]="'province-help-' + index"
+							/>
+						} @placeholder {
+							<div
+								class="chart-placeholder"
+								[style.height.px]="group.stats.provinces.length * 24 + 100"
+							></div>
+						}
+					} @else {
+						<p>Sin precios en este grupo.</p>
+					}
+				}
+				<button
+					class="table-toggle"
+					[attr.aria-expanded]="showTable()"
+					aria-controls="province-table"
+					(click)="showTable.update((value) => !value)"
+				>
+					{{ showTable() ? 'Ocultar tabla' : 'Ver como tabla' }}
+				</button>
+				@if (showTable()) {
+					<div
+						id="province-table"
+						class="table-wrap"
+						role="region"
+						aria-label="Tabla de precios por provincia"
+						tabindex="0"
+					>
+						<table>
+							<caption>
+								Precios del
+								{{
+									effectiveDate(data.date)
+								}}.
+								{{
+									data.fuel.name
+								}}.
+							</caption>
+							<thead>
+								<tr>
+									<th scope="col">Provincia</th>
+									<th scope="col">Media</th>
+									<th scope="col">Mediana</th>
+									<th scope="col">Mínimo</th>
+									<th scope="col">Máximo</th>
+									<th scope="col">Gasolineras</th>
+								</tr>
+							</thead>
+							<tbody>
+								@for (province of data.provinces; track province.provinceId) {
+									<tr>
+										<th scope="row">{{ province.province }}</th>
+										<td>{{ price(province.averagePrice, currentFuel()?.fuel?.unit) }}</td>
+										<td>{{ price(province.medianPrice, currentFuel()?.fuel?.unit) }}</td>
+										<td>{{ price(province.minPrice, currentFuel()?.fuel?.unit) }}</td>
+										<td>{{ price(province.maxPrice, currentFuel()?.fuel?.unit) }}</td>
+										<td>{{ count(province.stations) }}</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+			</div>
+		}
+	</section>
+	<app-statistics-charts [provinces]="areas()" />
+</main>

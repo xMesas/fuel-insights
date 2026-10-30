@@ -1,0 +1,48 @@
+main {
+	max-width: 48rem;
+	margin: 32px auto;
+	padding: 0 16px;
+}
+section {
+	margin-top: 32px;
+}
+article,
+section[aria-labelledby='plan-title'],
+.confirmation {
+	margin-top: 16px;
+	padding: 16px;
+	border: 1px solid var(--hairline);
+	border-radius: 12px;
+	background: var(--surface);
+}
+h3 {
+	margin-top: 0;
+}
+app-alert-form {
+	margin-top: 24px;
+}
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.price-board {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 12px;
+	padding: 16px;
+	border-radius: 8px;
+	background: var(--panel);
+	color: var(--panel-ink);
+	border: 1px solid var(--hairline);
+}
+.digits {
+	font-family: DSEG7, monospace;
+	font-weight: 700;
+	font-size: 28px;
+	color: var(--led);
+}
+sup {
+	font-size: 0.65em;
+}

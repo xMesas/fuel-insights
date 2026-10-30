@@ -1,0 +1,127 @@
+<main>
+	<h1>Mis gasolineras</h1>
+	@if (account.account(); as user) {
+		@if (thanks) {
+			<p role="status">Gracias. El plan se activa en unos segundos.</p>
+		}
+		<p aria-live="polite">{{ error() }}</p>
+		@if (loading()) {
+			<p role="status">Cargando gasolineras y alertas…</p>
+		} @else {
+			<button type="button" (click)="loadData()">Actualizar precios y alertas</button>
+			<section aria-labelledby="favourites-title">
+				<h2 id="favourites-title">Tus gasolineras</h2>
+				<app-fuel-picker [fuels]="fuels()" />
+				@for (station of sorted(); track station.id) {
+					<article>
+						<h3>
+							<a [routerLink]="['/gasolinera', station.id]">{{ station.name }}</a>
+						</h3>
+						<p>{{ station.town }}</p>
+						@if (ledParts(station.prices[preference.fuel()] ?? null); as digits) {
+							<p class="price-board">
+								<span class="visually-hidden">{{
+									price(station.prices[preference.fuel()], selectedFuel()?.unit)
+								}}</span>
+								<span class="digits" aria-hidden="true"
+									>{{ digits.main }}<sup>{{ digits.last }}</sup></span
+								>
+								<span aria-hidden="true">€/{{ selectedFuel()?.unit ?? 'l' }}</span>
+							</p>
+						} @else {
+							<p>
+								No hay precio de
+								{{ selectedFuel()?.shortName ?? selectedFuel()?.name ?? 'este carburante' }} en esta
+								gasolinera.
+							</p>
+						}
+						<button
+							type="button"
+							[disabled]="!account.favouritesReady() || account.pending().includes(station.id)"
+							(click)="removeFavourite(station.id)"
+							[attr.aria-label]="'Quitar ' + station.name"
+						>
+							Quitar
+						</button>
+						@if (fuels().length) {
+							<app-alert-form
+								[station]="station"
+								[fuels]="fuels()"
+								[selected]="preference.fuel()"
+								(saved)="alertSaved($event)"
+							/>
+						}
+					</article>
+				} @empty {
+					<p>Guarda gasolineras con la estrella de su ficha para verlas aquí con su precio.</p>
+				}
+			</section>
+			<section aria-labelledby="alerts-title">
+				<h2 id="alerts-title">Tus alertas</h2>
+				@if (!user.premium && user.alertLimit !== null) {
+					<p>Hasta {{ user.alertLimit }} alertas en la cuenta gratuita.</p>
+				}
+				@for (alert of alerts(); track alert.id) {
+					<article>
+						<p>
+							{{ alert.stationName }}, {{ alert.town }}: {{ fuelName(alert.fuel) }} a
+							{{ price(alert.threshold, unit(alert.fuel)) }} o menos
+						</p>
+						@if (alert.currentPrice !== null) {
+							<p>Precio actual: {{ price(alert.currentPrice, unit(alert.fuel)) }}</p>
+						}
+						<button
+							type="button"
+							[disabled]="busy()"
+							(click)="deleteAlert(alert.id)"
+							[attr.aria-label]="'Borrar alerta de ' + alert.stationName"
+						>
+							Borrar
+						</button>
+					</article>
+				} @empty {
+					<p>Aún no tienes alertas. Crea una desde tus gasolineras guardadas.</p>
+				}
+			</section>
+		}
+		<section aria-labelledby="plan-title">
+			<h2 id="plan-title">Plan sin anuncios</h2>
+			@if (user.premium) {
+				<p>Plan sin anuncios activo.</p>
+			} @else {
+				<p>Sin anuncios por 3 €/mes. Cancelas cuando quieras.</p>
+			}
+			<button type="button" [disabled]="busy() || planUnavailable()" (click)="openPlan()">
+				{{ user.premium ? 'Gestionar mi plan' : 'Quitar los anuncios' }}
+			</button>
+			<p aria-live="polite">{{ planMessage() }}</p>
+		</section>
+		<section aria-labelledby="account-title">
+			<h2 id="account-title">Tu cuenta</h2>
+			<p>{{ user.email }}</p>
+			<div class="actions">
+				<button type="button" [disabled]="busy()" (click)="signOut()">Cerrar sesión</button>
+				<button type="button" [disabled]="busy()" (click)="confirmingDeletion.set(true)">
+					Borrar mi cuenta
+				</button>
+			</div>
+			@if (confirmingDeletion()) {
+				<div class="confirmation">
+					<p role="alert">
+						Se borrarán tu cuenta, tus gasolineras y tus alertas. No se puede deshacer.
+					</p>
+					<div class="actions">
+						<button type="button" [disabled]="busy()" (click)="deleteAccount()">
+							Confirmar borrado de mi cuenta
+						</button>
+						<button type="button" [disabled]="busy()" (click)="confirmingDeletion.set(false)">
+							Cancelar
+						</button>
+					</div>
+				</div>
+			}
+		</section>
+	} @else {
+		<p role="status">{{ error() || 'Comprobando tu sesión…' }}</p>
+	}
+</main>

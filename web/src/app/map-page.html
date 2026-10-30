@@ -1,0 +1,193 @@
+<main>
+	<app-led-notice [message]="notice()" (dismissed)="notice.set(null)" />
+	<div class="live-layout">
+		<header>
+			<h1>Precio de la gasolina, el diésel y la recarga eléctrica</h1>
+			@if (current(); as national) {
+				<p class="national-summary">
+					Media en España, {{ summaryDate(national.updatedAt) }},
+					{{ summaryTime(national.updatedAt) }}:
+					@for (row of summaryFuels(); track row.fuel.code; let last = $last) {
+						<a
+							[routerLink]="
+								row.fuel.code === 'GASOLEO_A' ? '/precio-diesel-hoy' : '/precio-gasolina-hoy'
+							"
+							>{{ row.fuel.shortName ?? row.fuel.name }}
+							{{ summaryPrice(row.averagePrice, row.fuel.unit) }}</a
+						>
+						@if (!last) {
+							·
+						}
+					}
+				</p>
+			} @else {
+				<p>Precios de carburantes en España, con datos abiertos del Ministerio</p>
+			}
+			<div class="mode" role="radiogroup" aria-label="Qué buscas" (keydown)="navigateMode($event)">
+				<button
+					role="radio"
+					[attr.aria-checked]="mode() === 'fuel'"
+					[tabIndex]="mode() === 'fuel' ? 0 : -1"
+					(click)="setMode('fuel')"
+				>
+					Gasolina y diésel
+				</button>
+				<button
+					role="radio"
+					[attr.aria-checked]="mode() === 'electric'"
+					[tabIndex]="mode() === 'electric' ? 0 : -1"
+					(click)="setMode('electric')"
+				>
+					Recarga eléctrica
+				</button>
+			</div>
+		</header>
+		<div class="search-slot">
+			<app-place-search
+				[areas]="areas()"
+				[origin]="origin()"
+				(locate)="requestLocation()"
+				[radius]="radius()"
+				(choose)="setOrigin($event)"
+				(radiusChange)="radius.set($event)"
+			/>
+		</div>
+		<div class="board-slot">
+			@if (mode() === 'electric') {
+				@if (chargingSnapshot(); as ev) {
+					<app-charging-board
+						[sites]="chargingBoardSites()"
+						[scopeLabel]="chargingScopeLabel()"
+						[minBand]="minBand()"
+						[updatedAt]="ev.updatedAt"
+						(minBandChange)="minBand.set($event)"
+					>
+						<app-charging-list
+							[sites]="chargingListSites()"
+							[origin]="origin()"
+							[radius]="radius()"
+							[minBand]="minBand()"
+							[pageSize]="5"
+							[led]="true"
+							(choose)="goToCharging($event)"
+						/>
+					</app-charging-board>
+				} @else if (chargingStatus() === 'error') {
+					<div role="alert">
+						<p>! No se pudieron cargar los puntos de recarga. Revisa la conexión.</p>
+						<button (click)="retryCharging()">Reintentar</button>
+					</div>
+				} @else if (chargingStatus() === 'empty') {
+					<p>Aún no hay puntos de recarga publicados. Vuelve a consultar más tarde.</p>
+				} @else {
+					<p role="status">Cargando puntos de recarga…</p>
+				}
+			} @else {
+				@if (currentStatus() === 'loading') {
+					<p role="status">Cargando precios…</p>
+				}
+				@if (current(); as data) {
+					<app-price-board
+						[stats]="data"
+						[catalogue]="fuels()"
+						[zone]="currentZone()?.stats ?? null"
+						[scopeLabel]="currentZone()?.label ?? scopeLabel()"
+						[focusName]="provinceFocus() ? areaName() : null"
+						[selected]="selectedFuel()"
+						(choose)="chooseFuel($event)"
+						(clearScope)="provinceFocus.set(null)"
+					>
+						@if (snapshot(); as stations) {
+							<app-cheapest-list
+								[stations]="stations.stations"
+								[bounds]="bounds()"
+								[fuelName]="stations.fuel.shortName ?? stations.fuel.name"
+								[unit]="stations.fuel.unit"
+								[origin]="origin()"
+								[radius]="radius()"
+								[pageSize]="5"
+								[led]="true"
+								(radiusChange)="radius.set($event)"
+								(choose)="goToStation($event)"
+							/>
+						}
+					</app-price-board>
+					<p class="data-note">
+						Media = media simple de los precios de las gasolineras, sin ponderar por ventas.
+					</p>
+				}
+				@if (currentStatus() === 'empty') {
+					<p>Aún no hay precios actuales publicados. Vuelve a consultar más tarde.</p>
+				}
+				@if (currentStatus() === 'error') {
+					<div role="alert">
+						<p>! No se pudieron cargar los precios actuales. Revisa la conexión.</p>
+						<button (click)="retryCurrent()">Reintentar</button>
+					</div>
+				}
+			}
+		</div>
+		<div class="map-slot" [attr.aria-busy]="stationStatus() === 'loading'">
+			@if (stationStatus() === 'loading') {
+				<p role="status">Cargando gasolineras…</p>
+			}
+			@if (stationStatus() === 'error') {
+				<p role="alert">! No se pudieron cargar las gasolineras. Revisa la conexión.</p>
+				<button (click)="retryStations()">Reintentar</button>
+			}
+			@if (stationStatus() === 'empty') {
+				<p>Aún no hay gasolineras con precios actuales publicados.</p>
+			}
+			@defer (on immediate) {
+				<app-station-map
+					ngSkipHydration
+					[snapshot]="snapshot()"
+					[currentFuel]="currentFuel() ?? null"
+					(areaSearch)="setOrigin($event)"
+					(provinceFocus)="focusProvince($event)"
+					[focusArea]="provinceFocus()"
+					[target]="target()"
+					[cardSize]="cardSize()"
+					(dismiss)="closeStation()"
+					[selectedId]="stationId()"
+					[origin]="origin()"
+					[radius]="radius()"
+					(locate)="requestLocation()"
+					(boundsChange)="bounds.set($event)"
+					(choose)="openStation($event)"
+					[electric]="mode() === 'electric'"
+					[charging]="chargingSnapshot()"
+					[minBand]="minBand()"
+					[selectedCharging]="chargingId()"
+					(chooseCharging)="openCharging($event)"
+				/>
+			} @placeholder {
+				<div class="map-placeholder">Cargando mapa…</div>
+			}
+			@if (stationId() !== null) {
+				<app-station-card
+					[station]="station()"
+					[zone]="zone()"
+					(openStation)="chooseStation($event)"
+					[distance]="stationDistance()"
+					(resized)="cardSize.set($event)"
+					[error]="cardError()"
+					[fuels]="fuels()"
+					[selectedFuel]="selectedFuel()"
+					(close)="closeStation()"
+					(retry)="retryCard()"
+				/>
+			}
+			@if (chargingId() !== null) {
+				<app-charging-card
+					[site]="chargingSite()"
+					[error]="chargingError()"
+					[distance]="chargingDistance()"
+					(resized)="cardSize.set($event)"
+					(close)="closeStation()"
+					(retry)="retryChargingCard()"
+				/>
+			}
+		</div>
+	</div>
+</main>

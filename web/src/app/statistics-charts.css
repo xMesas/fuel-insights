@@ -1,0 +1,77 @@
+:host {
+	display: block;
+	min-width: 0;
+}
+.scope-note {
+	margin-top: 32px;
+	color: var(--ink-2);
+}
+.chart-card {
+	margin-top: 32px;
+	padding: 16px;
+	background: var(--surface);
+	border: 1px solid var(--hairline);
+	border-radius: 12px;
+	min-width: 0;
+}
+h2 {
+	font-size: 20px;
+	margin: 0 0 8px;
+}
+p {
+	line-height: 1.5;
+}
+.conclusion {
+	font-weight: 500;
+}
+.data-note {
+	color: var(--ink-2);
+	font-size: 14px;
+}
+.plot-placeholder {
+	height: 320px;
+}
+summary,
+button {
+	min-height: 44px;
+	cursor: pointer;
+	font: inherit;
+}
+summary {
+	padding: 12px 0;
+}
+button {
+	background: var(--surface);
+	color: var(--ink);
+	border: 1px solid var(--hairline);
+	border-radius: 8px;
+	padding: 8px 16px;
+}
+.table-wrap {
+	max-width: 100%;
+	overflow: auto;
+}
+table {
+	border-collapse: collapse;
+	width: 100%;
+	font-size: 14px;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+caption {
+	text-align: left;
+	margin-bottom: 12px;
+}
+th,
+td {
+	padding: 10px;
+	text-align: right;
+	border-bottom: 1px solid var(--hairline);
+}
+th:first-child {
+	text-align: left;
+}
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 3px;
+}

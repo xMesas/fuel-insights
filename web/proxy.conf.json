@@ -1,0 +1,11 @@
+{
+	"/sitemap.xml": {
+		"target": "http://localhost:8080",
+		"secure": false,
+		"pathRewrite": { "^/sitemap.xml": "/api/sitemap.xml" }
+	},
+	"/api": {
+		"target": "http://localhost:8080",
+		"secure": false
+	}
+}

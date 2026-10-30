@@ -1,0 +1,119 @@
+<main class="data-page">
+	@if (data(); as page) {
+		<nav class="breadcrumbs" aria-label="Ruta de navegación">
+			<a routerLink="/">Inicio</a><span aria-hidden="true">›</span
+			><span>{{ page.province.name }}</span>
+		</nav>
+		<h1>Gasolineras en {{ page.province.name }}: precios de hoy, {{ fullDate(page.updatedAt) }}</h1>
+		<p class="updated">{{ ministryDate(page.updatedAt) }}</p>
+		<app-fuel-picker [fuels]="pickerFuels()" />
+		@if (selected(); as row) {
+			<h2>{{ row.fuel.shortName ?? row.fuel.name }} en {{ page.province.name }}</h2>
+			<app-page-figures [data]="row.figures" [unit]="row.fuel.unit" />
+			<p>{{ comparison(row.figures.averagePrice, row.nationalAverage, 'España') }}.</p>
+			<app-cheapest-table [rows]="row.cheapest" [unit]="row.fuel.unit" />
+			<app-ad-slot />
+			<section aria-labelledby="trend-title">
+				<h2 id="trend-title">Evolución de {{ row.fuel.shortName ?? row.fuel.name }}</h2>
+				@if (trend(); as series) {
+					@defer (on viewport) {
+						<app-trend-chart [trend]="series" />
+					} @placeholder {
+						<div class="chart-placeholder">Gráfico de evolución</div>
+					}
+					<details>
+						<summary>Ver los datos de la evolución</summary>
+						<div class="table-scroll" tabindex="0" role="region" aria-label="Evolución diaria">
+							<table>
+								<caption>
+									Medias diarias publicadas en
+									{{
+										page.province.name
+									}}
+								</caption>
+								<thead>
+									<tr>
+										<th scope="col">Fecha</th>
+										<th scope="col">Media</th>
+									</tr>
+								</thead>
+								<tbody>
+									@for (point of series.points; track point.date) {
+										<tr>
+											<th scope="row">{{ effectiveDate(point.date) }}</th>
+											<td class="num">{{ price(point.averagePrice, row.fuel.unit) }}</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					</details>
+				} @else if (trendStatus() === 'error') {
+					<p role="alert">No se ha podido cargar la evolución.</p>
+				} @else if (trendStatus() === 'loading') {
+					<p role="status">Cargando evolución…</p>
+				} @else {
+					<p>Aún sin historial para este carburante.</p>
+				}
+			</section>
+		}
+		@if (!selected()) {
+			<p role="status">
+				No hay gasolineras con el carburante seleccionado en {{ page.province.name }}.
+			</p>
+		}
+		@if (others().length) {
+			<section>
+				<h2>Otros carburantes</h2>
+				<div class="table-scroll" tabindex="0" role="region" aria-label="Otros carburantes">
+					<table>
+						<caption>
+							Otros carburantes en
+							{{
+								page.province.name
+							}}
+						</caption>
+						<thead>
+							<tr>
+								<th scope="col">Carburante</th>
+								<th scope="col">Media</th>
+								<th scope="col">Más barata</th>
+								<th scope="col">Gasolineras</th>
+							</tr>
+						</thead>
+						<tbody>
+							@for (row of others(); track row.fuel.code) {
+								<tr>
+									<th scope="row">{{ row.fuel.shortName ?? row.fuel.name }}</th>
+									<td class="num">{{ price(row.figures.averagePrice, row.fuel.unit) }}</td>
+									<td class="num">{{ price(row.figures.minPrice, row.fuel.unit) }}</td>
+									<td>{{ row.figures.stations }}</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</section>
+		}
+		<section>
+			<h2>Gasolineras por municipio</h2>
+			<ul class="town-links">
+				@for (town of page.towns; track town.slug) {
+					<li>
+						<a [routerLink]="['/gasolineras', page.province.slug, town.slug]">{{ town.name }}</a>
+						<span class="note">({{ town.stations }})</span>
+					</li>
+				}
+			</ul>
+		</section>
+	} @else if (status() === 'loading') {
+		<h1>Gasolineras por provincia</h1>
+		<p role="status">Cargando precios…</p>
+	} @else if (status() === 'missing') {
+		<h1>No encontramos esta página.</h1>
+	} @else {
+		<h1>Precios no disponibles</h1>
+		<p role="alert">No se han podido cargar los precios. Vuelve a intentarlo más tarde.</p>
+	}
+	<p><a routerLink="/">Ver gasolineras en el mapa</a></p>
+</main>

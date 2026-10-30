@@ -1,0 +1,160 @@
+<main class="data-page">
+	@if (station(); as detail) {
+		@if (data(); as page) {
+			<nav class="breadcrumbs" aria-label="Ruta de navegación">
+				<a routerLink="/">Inicio</a><span aria-hidden="true">›</span
+				><a [routerLink]="['/gasolineras', page.province.slug]">{{ page.province.name }}</a
+				><span aria-hidden="true">›</span
+				><a [routerLink]="['/gasolineras', page.province.slug, page.town.slug]">{{
+					page.town.name
+				}}</a
+				><span aria-hidden="true">›</span><span>{{ detail.name }}</span>
+			</nav>
+			<h1>{{ detail.name }} en {{ page.town.name }}</h1>
+			<app-favourite-star [stationId]="detail.id" />
+			<p class="updated">{{ ministryDate(detail.updatedAt) }}</p>
+			<p>
+				{{ detail.address }}, {{ detail.postalCode }} {{ page.town.name }} ({{
+					page.province.name
+				}})
+			</p>
+			<p>{{ hours() }}</p>
+			@if (detail.schedule) {
+				<p class="note">Horario publicado por el Ministerio: {{ detail.schedule }}</p>
+			}
+			<div class="table-scroll">
+				<table>
+					<caption>
+						Precios en
+						{{
+							detail.name
+						}}
+					</caption>
+					<thead>
+						<tr>
+							<th scope="col">Carburante</th>
+							<th scope="col">Precio</th>
+						</tr>
+					</thead>
+					<tbody>
+						@for (row of detail.prices; track row.fuel.code) {
+							<tr>
+								<th scope="row">{{ row.fuel.shortName ?? row.fuel.name }}</th>
+								<td>{{ price(row.price, row.fuel.unit) }}</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+			<div class="actions">
+				<a [href]="directions()" target="_blank" rel="noopener"
+					>Cómo llegar<span class="visually-hidden">
+						(Google Maps, se abre en otra pestaña)</span
+					></a
+				><a routerLink="/" [queryParams]="{ gasolinera: detail.id }">Ver en el mapa</a>
+			</div>
+			<section>
+				<h2>Precios de los últimos 30 días</h2>
+				<label for="station-fuel">Carburante </label
+				><select
+					id="station-fuel"
+					[value]="selected()?.fuel?.code"
+					(change)="preference.choose($any($event.target).value)"
+				>
+					@for (row of detail.prices; track row.fuel.code) {
+						<option [value]="row.fuel.code">{{ row.fuel.shortName ?? row.fuel.name }}</option>
+					}
+				</select>
+				@if (trend(); as series) {
+					@defer (on viewport) {
+						<app-trend-chart [trend]="series" />
+					} @placeholder {
+						<div class="chart-placeholder">Gráfico de precios de los últimos 30 días</div>
+					}
+					<details>
+						<summary>Ver los precios por día</summary>
+						<table>
+							<caption>
+								{{
+									selected()?.fuel?.name
+								}}: precios diarios publicados
+							</caption>
+							<thead>
+								<tr>
+									<th scope="col">Fecha</th>
+									<th scope="col">Precio</th>
+								</tr>
+							</thead>
+							<tbody>
+								@for (row of history(); track row.date) {
+									<tr>
+										<th scope="row">{{ effectiveDate(row.date) }}</th>
+										<td>{{ price(row.price, selected()!.fuel.unit) }}</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</details>
+				} @else {
+					<p>Aún sin historial para este carburante.</p>
+				}
+			</section>
+			<section>
+				<h2>Gasolineras cercanas, a menos de 10 km</h2>
+				@if (page.nearby.length && selected(); as chosen) {
+					<div class="table-scroll" tabindex="0" role="region" aria-label="Gasolineras cercanas">
+						<table>
+							<caption>
+								{{
+									selected()!.fuel.shortName ?? selected()!.fuel.name
+								}}
+								en gasolineras cercanas;
+								{{
+									ministryDate(detail.updatedAt)
+								}}
+							</caption>
+							<thead>
+								<tr>
+									<th scope="col">Gasolinera</th>
+									<th scope="col">Municipio</th>
+									<th scope="col">Distancia</th>
+									<th scope="col">Precio</th>
+								</tr>
+							</thead>
+							<tbody>
+								@for (row of page.nearby; track row.id) {
+									<tr>
+										<th scope="row">
+											<a [routerLink]="['/gasolinera', row.slug]">{{ row.name }}</a>
+										</th>
+										<td>{{ row.town }}</td>
+										<td>{{ decimal(row.distanceKm, 1) }} km</td>
+										<td>
+											@if (row.prices[selected()!.fuel.code] != null) {
+												{{ price(row.prices[selected()!.fuel.code], selected()!.fuel.unit) }}
+											} @else {
+												<span aria-label="No vende este carburante">—</span>
+											}
+										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				} @else {
+					<p>No hay otras gasolineras cercanas con precios publicados.</p>
+				}
+			</section>
+		}
+	} @else if (status() === 'loading') {
+		<h1>Ficha de gasolinera</h1>
+		<p role="status">Cargando precios…</p>
+	} @else if (status() === 'missing') {
+		<h1>No encontramos esta página.</h1>
+		<p><a routerLink="/">Ir al mapa</a></p>
+	} @else {
+		<h1>Precios no disponibles</h1>
+		<p role="alert">No se han podido cargar los precios. Vuelve a intentarlo más tarde.</p>
+		<p><a routerLink="/">Ir al mapa</a></p>
+	}
+</main>

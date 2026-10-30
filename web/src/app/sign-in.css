@@ -1,0 +1,40 @@
+:host {
+	display: block;
+}
+main {
+	max-width: 36rem;
+	margin: 32px auto;
+	padding: 0 16px;
+}
+form {
+	display: grid;
+	gap: 12px;
+}
+input,
+button {
+	min-height: 44px;
+	border: 1px solid var(--hairline);
+	border-radius: 8px;
+	padding: 8px 12px;
+	font: inherit;
+	background: var(--surface);
+	color: var(--ink);
+}
+input {
+	width: 100%;
+	box-sizing: border-box;
+}
+button {
+	cursor: pointer;
+}
+button:disabled {
+	cursor: default;
+	opacity: 0.65;
+}
+a {
+	color: var(--ink);
+}
+:is(input, button, a):focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 3px;
+}

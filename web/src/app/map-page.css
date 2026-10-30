@@ -1,0 +1,118 @@
+:host {
+	display: block;
+}
+main {
+	max-width: 1440px;
+	margin: auto;
+	padding: 16px;
+}
+.live-layout {
+	display: grid;
+	gap: 24px;
+	grid-template-areas: 'header' 'search' 'board' 'map';
+}
+header {
+	grid-area: header;
+}
+h1 {
+	font-size: 20px;
+	line-height: 1.35;
+	margin: 0;
+}
+header p {
+	color: var(--ink-2);
+	margin: 8px 0 0;
+}
+.board-slot {
+	grid-area: board;
+	min-width: 0;
+}
+.search-slot {
+	grid-area: search;
+	min-width: 0;
+}
+
+.map-slot {
+	grid-area: map;
+	position: relative;
+	height: max(420px, 70svh);
+	min-width: 0;
+}
+.map-placeholder {
+	min-height: 70svh;
+	background: var(--panel);
+	color: var(--panel-ink);
+	padding: 16px;
+}
+@media (min-width: 1024px) {
+	.live-layout {
+		grid-template-columns: 400px minmax(0, 1fr);
+		grid-template-rows: auto auto 1fr;
+		grid-template-areas: 'header map' 'search map' 'board map';
+		gap: 24px;
+		align-items: start;
+	}
+	.map-slot {
+		position: sticky;
+		top: 16px;
+		height: calc(100svh - 32px);
+		align-self: start;
+	}
+	.map-slot > .data-note {
+		margin-bottom: 0;
+	}
+}
+
+.map-slot app-station-card,
+.map-slot app-charging-card {
+	position: absolute;
+	z-index: 3;
+	left: 0;
+	right: 0;
+	bottom: 34px;
+	max-height: 70%;
+}
+@media (min-width: 1024px) {
+	/* Below the two rows of map controls (12 + 44 + 6 + 44 px) and above the legend, which is taller for charging. */
+	.map-slot app-station-card,
+	.map-slot app-charging-card {
+		top: 118px;
+		left: 16px;
+		right: auto;
+		bottom: auto;
+		width: 360px;
+		max-height: calc(100% - 282px);
+	}
+}
+
+/* Fuel or charging: the first choice on the page, as two segments of one control. */
+.mode {
+	display: flex;
+	gap: 4px;
+	margin-top: 12px;
+	padding: 4px;
+	border: 1px solid var(--axis);
+	border-radius: 12px;
+}
+.mode button {
+	flex: 1;
+	min-height: 44px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--ink-2);
+	font-weight: 600;
+}
+.mode button[aria-checked='true'] {
+	background: var(--ink);
+	color: var(--surface);
+}
+
+.data-note {
+	font-size: 14px;
+	color: var(--ink-2);
+}
+:host .national-summary a {
+	color: inherit;
+	text-underline-offset: 3px;
+}
