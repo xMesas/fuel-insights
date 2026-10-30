@@ -1,0 +1,13 @@
+# The build context is the repository root (compose.prod.yaml): only the web and the legal texts go in.
+*
+!web/
+!docs/legal/
+web/node_modules
+web/dist
+web/.angular
+web/tmp
+web/coverage
+web/.vscode
+web/.idea
+**/*.log
+**/.env*

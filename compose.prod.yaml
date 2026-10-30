@@ -1,0 +1,153 @@
+# Production stack: PostgreSQL, the API, the page renderer (Node) and the web (nginx). Only the web publishes a port.
+# Create the two secret files first (see README, "Run with Docker"), then:
+#   docker compose -f compose.prod.yaml up -d --build
+name: fuel-insights
+
+# Docker keeps container logs forever by default: rotate them.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_admin_password
+      POSTGRES_DB: fuel_insights
+      APP_DB_USER: fuel
+      APP_DB_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_admin_password, db_password]
+    volumes:
+      # PostgreSQL 18 keeps its data under /var/lib/postgresql/18/docker.
+      - pgdata:/var/lib/postgresql
+      - ./deploy/postgres/create-app-role.sh:/docker-entrypoint-initdb.d/10-create-app-role.sh:ro
+    networks: [data]
+    healthcheck:
+      # Over TCP: while the init scripts run, PostgreSQL only listens on its Unix socket.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "fuel_insights"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+      start_interval: 2s
+    restart: unless-stopped
+    logging: *logging
+
+  backend:
+    build: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fuel_insights
+      SPRING_DATASOURCE_USERNAME: fuel
+      # fuel-insights.import.*: days the app keeps complete, catch-up at startup, daily catch-up ("-" turns it off).
+      FUELINSIGHTS_IMPORT_CATCHUPDAYS: ${CATCH_UP_DAYS:-14}
+      FUELINSIGHTS_IMPORT_CATCHUPONSTARTUP: ${CATCH_UP_ON_STARTUP:-true}
+      FUELINSIGHTS_IMPORT_CRON: "${IMPORT_CRON:-0 0 6 * * *}"
+      FUELINSIGHTS_CURRENT_REFRESHONSTARTUP: ${CURRENT_ON_STARTUP:-true}
+      FUELINSIGHTS_CURRENT_CRON: "${CURRENT_CRON:-0 */15 * * * *}"
+      FUELINSIGHTS_CHARGING_REFRESHONSTARTUP: ${CHARGING_ON_STARTUP:-true}
+      FUELINSIGHTS_CHARGING_CRON: "${CHARGING_CRON:-0 20 */6 * * *}"
+      # The public address of the site: the absolute links of /sitemap.xml and /robots.txt.
+      FUELINSIGHTS_SITE_ORIGIN: ${SITE_ORIGIN:-http://localhost:8000}
+      # The SMTP server of the sign-in and alert emails (Amazon SES when the site goes live).
+      SPRING_MAIL_HOST: ${MAIL_HOST:-localhost}
+      SPRING_MAIL_PORT: ${MAIL_PORT:-1025}
+    secrets:
+      # Read by Spring as the property spring.datasource.password (configtree:/run/secrets/).
+      - source: db_password
+        target: spring.datasource.password
+      # Signs the unsubscribe links of the alert emails; the app does not start without it.
+      - source: signing_key
+        target: fuel-insights.accounts.signing-key
+    networks: [edge, data]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # The main port, not the management one: it proves the server that answers the API is up.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+      start_interval: 2s
+    # Spring stops the web server (up to 30 s), then lets the day being imported finish (up to 60 s).
+    stop_grace_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    restart: unless-stopped
+    logging: *logging
+
+  # Renders the pages on the server (Angular SSR). It reads the API inside the edge network.
+  ssr:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      target: ssr
+    environment:
+      API_ORIGIN: http://backend:8080
+      SITE_ORIGIN: ${SITE_ORIGIN:-http://localhost:8000}
+      # Angular answers 400 to any other Host header (host header injection); the production domain goes here.
+      NG_ALLOWED_HOSTS: ${SITE_HOSTS:-localhost,127.0.0.1}
+    networks: [edge]
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4000/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+      start_interval: 2s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    restart: unless-stopped
+    logging: *logging
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      target: web
+    ports:
+      - "${WEB_ADDRESS:-0.0.0.0}:${WEB_PORT:-8000}:8080"
+    networks: [edge]
+    depends_on:
+      ssr:
+        condition: service_healthy
+    healthcheck:
+      # A static file: nginx itself, not the pages behind it.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/favicon.svg"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+      start_interval: 2s
+    restart: unless-stopped
+    logging: *logging
+
+# edge: web, page renderer and API. data: API and database, with no way out to the internet; neither the web nor the
+# renderer can reach PostgreSQL.
+networks:
+  edge:
+  data:
+    internal: true
+
+secrets:
+  db_password:
+    file: ${SECRETS_DIR:-./secrets}/db_password.txt
+  db_admin_password:
+    file: ${SECRETS_DIR:-./secrets}/db_admin_password.txt
+  signing_key:
+    file: ${SECRETS_DIR:-./secrets}/signing_key.txt
+
+volumes:
+  pgdata:
