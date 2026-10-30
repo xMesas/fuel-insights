@@ -1,0 +1,16 @@
+# Local development only: Spring Boot starts it on `spring-boot:run`.
+services:
+  postgres:
+    image: 'postgres:18'
+    environment:
+      - 'POSTGRES_DB=fuel_insights'
+      - 'POSTGRES_USER=fuel'
+      - 'POSTGRES_PASSWORD=local-only'
+    ports:
+      - '5432'
+  # Catches every email the app sends (sign-in links, alerts); its inbox is http://localhost:8025.
+  mailpit:
+    image: 'axllent/mailpit:v1.32'
+    ports:
+      - '1025:1025'
+      - '8025:8025'
