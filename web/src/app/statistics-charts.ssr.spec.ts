@@ -6,6 +6,17 @@ import { StatisticsCharts } from './statistics-charts';
 import { brandStats, spreadStats, weekdayStats } from './statistics-fixture';
 
 describe('Statistics server rendering', () => {
+	// Rendering copies Domino's DOM classes (Event, Node...) onto globalThis, and test files share a
+	// worker: put jsdom's back so the files that run next can still dispatch events.
+	const domClasses = Object.getOwnPropertyNames(globalThis)
+		.filter((name) => /^[A-Z]/.test(name))
+		.map((name) => [name, Reflect.get(globalThis, name)] as const);
+	afterAll(() => {
+		for (const [name, value] of domClasses) {
+			if (Reflect.get(globalThis, name) !== value) Reflect.set(globalThis, name, value);
+		}
+	});
+
 	it('includes all conclusions and tables in the HTML without loading chart canvases', async () => {
 		const html = await renderApplication(
 			(context) =>
