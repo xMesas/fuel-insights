@@ -41,12 +41,12 @@ About 12,000 sites and 36,000 charging points, with power, connectors, operator,
 
 ## Tech stack
 
-- Backend: Java 25, Spring Boot 4.1, Spring Batch, Spring Boot Actuator, PostgreSQL, Flyway, JUnit + Testcontainers
-- Web: Angular 22 + Apache ECharts, served by nginx
+- Backend: Java 25, Spring Boot 4.1, Spring Batch, Spring Security, Spring Session JDBC, Spring Boot Actuator, PostgreSQL, Flyway, Stripe (test mode), JUnit + Testcontainers
+- Web: Angular 22 with SSR + Apache ECharts, served by nginx and a Node container
 - Containers: Docker multi-stage images, Docker Compose
 - CI: GitHub Actions (tests, image build, smoke test of the production stack)
 
-Map: MapLibre with OpenFreeMap tiles. Later phases (planned): Angular SSR, Spring Security, Stripe, AWS with Terraform.
+Map: MapLibre with OpenFreeMap tiles. Next phase (planned): AWS with Terraform.
 
 ## Architecture
 
@@ -60,6 +60,7 @@ A modular monolith: one Spring Boot app with one package per module:
 - `accounts`: sign-in by email, favourite stations, price alerts and their emails, and the security setup
 - `premium`: the ad-free plan with Stripe; other modules only ask `PremiumStatus.isPremium(user)`
 - `charging`: public charging sites, from their feed to their read API, with its own tables
+- `geocoding`: street addresses for the search box, through CartoCiudad, the National Geographic Institute's geocoder
 - `shared`: the few things every module may use (town names, slugs, the 404 problem); modules depend on it, never on each other's internals
 
 Why one deployable and not microservices: one team, one database, the modules keep the code apart without the cost of a network between them. The charging module shows the shape a new feature takes: its own tables, import, lock key, metric and endpoints, and no import from another module.
@@ -106,9 +107,9 @@ cd web && npm install && npm start
 
 ## Run with Docker
 
-The production stack: PostgreSQL, the API and the web (nginx). It needs only Docker; the images are built from the source.
+The production stack: PostgreSQL, the API, the server rendering (Node) and the web (nginx). It needs only Docker; the images are built from the source.
 
-Create the two database passwords once (the `secrets/` folder is not in git). `tr` removes the line ending: OpenSSL on Windows writes `\r\n`.
+Create the two database passwords and the signing key once (the `secrets/` folder is not in git). `tr` removes the line ending: OpenSSL on Windows writes `\r\n`.
 
 ```bash
 mkdir -p secrets
